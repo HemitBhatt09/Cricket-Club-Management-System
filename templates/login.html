@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Login</h2>
+
+<form id="loginForm">
+  Name: <input type="text" id="name"><br><br>
+  Mobile: <input type="text" id="mobile"><br><br>
+  Password: <input type="text" id="password"><br><br>
+  
+  <button type="submit">Login</button>
+</form>
+
+<script>
+document.getElementById("loginForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    fetch("http://127.0.0.1:5000/login", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            name: document.getElementById("name").value,
+            mobile_no: document.getElementById("mobile").value,
+            password: document.getElementById("password").value
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.message === "Login successful"){
+            alert("Login Successful ✅");
+        } else {
+            alert("Invalid Credentials ❌");
+        }
+    });
+});
+</script>
+
+</body>
+</html>

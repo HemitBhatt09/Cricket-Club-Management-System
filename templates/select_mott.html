@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Select Man of the Tournament{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 800px; margin: 0 auto; color: #fff;">
+    <div class="glass-panel" style="background: rgba(30, 41, 59, 0.9); padding: 30px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--glass-shadow);">
+        <h2 style="color: gold; text-align: center; font-weight: bold; margin-bottom: 20px;">👑 Select Man of the Tournament</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 30px;">
+            The final match of <b>{{ tournament_name }}</b> has concluded! Please select the standout player of the entire tournament to officially crown the champions.
+        </p>
+        
+        <div class="mvp-list" id="mvpList">
+            {% for p in players %}
+            <div class="mvp-card" data-userid="{{ p.user_id }}" data-name="{{ p.name | replace('\"', '&quot;') }}" style="
+                background: linear-gradient(135deg, rgba(15,23,42,0.8), rgba(30,41,59,0.8));
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                padding: 15px 20px;
+                margin-bottom: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            ">
+                
+                <div class="player-info" style="display: flex; align-items: center; gap: 15px;">
+                    <div style="font-size: 2rem;">👤</div>
+                    <div>
+                        <h4 style="margin: 0; color: #fff; font-size: 1.2rem;">{{ p.name }} <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 400; margin-left: 5px;">{{ p.team_name }}</span></h4>
+                        <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.85rem;">
+                            Runs: {{ p.bat_runs }} | Wickets: {{ p.bowl_wickets }} | Dismissals: {{ p.field_dismissals }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="player-points" style="text-align: right;">
+                    <h3 style="margin: 0; color: #f59e0b;">{{ p.points }} pts</h3>
+                </div>
+
+            </div>
+            {% endfor %}
+            {% if not players %}
+            <p style="text-align: center; color: var(--text-muted);">No player statistics found for this tournament.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div id="tournamentData" data-tournamentid="{{ tournament_id }}" style="display: none;"></div>
+
+<script>
+    document.querySelectorAll('.mvp-card').forEach(card => {
+        card.addEventListener('mouseover', function() {
+            this.style.borderColor = 'gold';
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 5px 15px rgba(255, 215, 0, 0.15)';
+        });
+        card.addEventListener('mouseout', function() {
+            this.style.borderColor = 'var(--border-color)';
+            this.style.transform = 'none';
+            this.style.boxShadow = 'none';
+        });
+        
+        card.addEventListener('click', function() {
+            const userId = this.getAttribute('data-userid');
+            const name = this.getAttribute('data-name');
+            const tid = document.getElementById('tournamentData').getAttribute('data-tournamentid');
+            
+            if (!confirm("Select " + name + " as Man of the Tournament? This will finally complete the tournament!")) return;
+
+            fetch("/save-mott", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    tournament_id: parseInt(tid),
+                    mott_id: parseInt(userId)
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.error) {
+                    alert("Error: " + data.error);
+                } else {
+                    window.location.href = "/tournament/" + tid + "/matches";
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("An error occurred");
+            });
+        });
+    });
+</script>
+{% endblock %}

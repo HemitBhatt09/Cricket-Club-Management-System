@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Signup</h2>
+
+<form id="signupForm">
+  Name: <input type="text" id="name"><br><br>
+  Mobile: <input type="text" id="mobile"><br><br>
+  Password: <input type="text" id="password"><br><br>
+  Role: <input type="text" id="role"><br><br>
+  
+  <button type="submit">Signup</button>
+</form>
+
+<script>
+document.getElementById("signupForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    fetch("http://127.0.0.1:5000/signup", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            name: document.getElementById("name").value,
+            mobile_no: document.getElementById("mobile").value,
+            password: document.getElementById("password").value,
+            role: document.getElementById("role").value
+        })
+    })
+    .then(res => res.json())
+    .then(data => alert(JSON.stringify(data)))
+});
+</script>
+
+</body>
+</html>

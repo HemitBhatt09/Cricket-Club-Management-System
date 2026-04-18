@@ -1,0 +1,77 @@
+/* ================= TEAM PAGE ONLY ================= */
+
+/* Container width */
+.container {
+    max-width: 600px;
+}
+
+/* Inputs */
+input {
+    border-radius: 8px !important;
+    border: none !important;
+    padding: 10px;
+}
+
+/* ================= DROPDOWN STYLE ================= */
+#captainResults,
+#playerResults {
+    width: 100%;
+    max-height: 180px;
+    overflow-y: auto;
+    background: white;
+    color: black;
+    border-radius: 8px;
+    margin-top: 5px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* Dropdown items */
+#captainResults div,
+#playerResults div {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+#captainResults div:hover,
+#playerResults div:hover {
+    background: #e6f2ff;
+}
+
+
+/* ================= SELECTED PLAYERS ================= */
+#selectedPlayers {
+    margin-top: 10px;
+}
+
+/* Player chips */
+.selected-chip {
+    display: inline-block;
+    background: #0d6efd;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 20px;
+    margin: 5px;
+    font-size: 14px;
+}
+
+/* Remove button */
+.selected-chip span {
+    margin-left: 8px;
+    cursor: pointer;
+    color: #ff4d4d;
+    font-weight: bold;
+}
+
+
+/* Scrollbar (optional) */
+#captainResults::-webkit-scrollbar,
+#playerResults::-webkit-scrollbar {
+    width: 6px;
+}
+
+#captainResults::-webkit-scrollbar-thumb,
+#playerResults::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}

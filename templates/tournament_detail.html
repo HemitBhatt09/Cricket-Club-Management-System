@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Tournament Details - CCMS{% endblock %}
+
+{% block header_title %}Tournament Control Panel{% endblock %}
+
+{% block content %}
+<div class="form-section" style="max-width: 800px; margin: 0 auto; margin-bottom: 30px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <h3 style="color: var(--text-color); margin: 0;">Tournament #<span id="tid" style="color: var(--accent-primary);"></span></h3>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+            <div style="display: flex; gap: 10px;">
+                <button class="submit-btn" id="generateScheduleBtn" style="width: auto; padding: 10px 20px; margin: 0; background: linear-gradient(135deg, #10b981, #059669);" onclick="generateSchedule()">🎲 Generate Draft</button>
+                <button class="submit-btn" id="finalizeTournamentBtn" style="width: auto; padding: 10px 20px; margin: 0; display: none;" onclick="finalizeTournament()">🚀 Finalize Tournament</button>
+            </div>
+            <span id="teamCountHint" style="display:none; color: #f59e0b; font-size: 0.82rem; font-weight: 600;"></span>
+        </div>
+    </div>
+
+    <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 25px;">
+
+    <!-- Draft Schedule Section -->
+    <div id="draftScheduleSection" style="display: none; margin-bottom: 30px; padding: 15px; background: rgba(0,0,0,0.15); border-radius: 12px; border: 1px solid var(--border-color);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="color: var(--accent-secondary); margin: 0;">📅 Draft Schedule</h4>
+            <button onclick="generateSchedule()" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;">🔄 Regenerate All</button>
+        </div>
+        <div id="draftMatchesList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+    </div>
+
+    <!-- Search & Invite Section -->
+    <div style="margin-bottom: 30px;">
+        <h4 style="color: var(--text-muted); margin-bottom: 15px;">🔍 Search & Invite Teams</h4>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="teamSearchInput" class="search-box" placeholder="Search team by name..." style="flex: 1; border-radius: 12px; margin: 0; max-width: 100%;">
+        </div>
+        <div id="searchResults" style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px; max-height: 150px; overflow-y: auto;"></div>
+    </div>
+
+    <h4 style="color: var(--text-muted); margin-bottom: 20px;">🛡️ Track Teams</h4>
+    <div id="teamsList" style="display: flex; flex-direction: column; gap: 15px;"></div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const pathParts = window.location.pathname.split("/");
+    const tournamentId = pathParts[pathParts.length - 1];
+
+    document.getElementById("tid").innerText = tournamentId;
+
+    let allTeamsForSearch = [];
+    let registeredTeams = [];
+
+    // ================= LOAD ALL TEAMS FOR SEARCH =================
+    function fetchAllTeams() {
+        fetch("/teams")
+            .then(res => res.json())
+            .then(data => { allTeamsForSearch = data || []; })
+            .catch(err => console.error("Error fetching teams:", err));
+    }
+
+    document.getElementById("teamSearchInput").addEventListener("input", function() {
+        const query = this.value.toLowerCase();
+        const resultsDiv = document.getElementById("searchResults");
+        resultsDiv.innerHTML = "";
+
+        if (!query) return;
+
+        const filtered = allTeamsForSearch.filter(t => t.team_name.toLowerCase().includes(query));
+        
+        filtered.forEach(t => {
+            // Check if already registered
+            const isReg = registeredTeams.find(rt => rt.team_id === t.team_id);
+            if (isReg) return;
+
+            const div = document.createElement("div");
+            div.style.cssText = "background: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);";
+            div.innerHTML = `
+                <span style="color: var(--text-color); font-weight: bold;">${t.team_name}</span>
+                <button onclick="inviteTeam(${t.team_id})" style="background: var(--accent-primary); color: white; border: none; padding: 5px 15px; border-radius: 6px; cursor: pointer;">Invite</button>
+            `;
+            resultsDiv.appendChild(div);
+        });
+    });
+
+    function inviteTeam(teamId) {
+        fetch("/invite-team", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tournament_id: tournamentId, team_id: teamId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.error) alert(data.error);
+            else {
+                document.getElementById("teamSearchInput").value = "";
+                document.getElementById("searchResults").innerHTML = "";
+                loadTeams();
+            }
+        });
+    }
+
+    // ================= LOAD TEAMS =================
+    function loadTeams() {
+        fetch(`/tournament-teams/${tournamentId}`)
+            .then(async res => {
+                let data = await res.json();
+                if (!res.ok) return;
+
+                registeredTeams = data;
+                let div = document.getElementById("teamsList");
+                div.innerHTML = "";
+
+                let pendingCount = 0;
+
+                if (data.length === 0) {
+                    div.innerHTML = "<p style='color: var(--text-muted); text-align: center;'>No teams currently.</p>";
+                    return;
+                }
+
+                data.forEach(t => {
+                    let buttons = "";
+
+                    if (t.status === "PENDING") {
+                        pendingCount++;
+                        buttons = `
+                            <button style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;" onclick="updateStatus(${t.team_id}, 'ACCEPTED')">Accept Request</button>
+                            <button style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;" onclick="updateStatus(${t.team_id}, 'REJECTED')">Reject</button>
+                        `;
+                    }
+                    else if (t.status === "ACCEPTED") {
+                        buttons = `<span style="color: #22c55e; font-weight: bold; background: rgba(34,197,94,0.1); padding: 5px 15px; border-radius: 20px;">Accepted ✅</span>`;
+                    }
+                    else if (t.status === "INVITED") {
+                        pendingCount++;
+                        buttons = `<span style="color: #f59e0b; font-weight: bold; background: rgba(245,158,11,0.1); padding: 5px 15px; border-radius: 20px;">Invited (Pending) ⏳</span>`;
+                    }
+                    else {
+                        buttons = `<span style="color: #ef4444; font-weight: bold; background: rgba(239,68,68,0.1); padding: 5px 15px; border-radius: 20px;">Rejected ❌</span>`;
+                    }
+
+                    div.innerHTML += `
+                    <div style="background: var(--bg-input); border: 1px solid var(--border-color); padding: 15px 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <p style="margin: 0 0 5px 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color);">${t.team_name}</p>
+                            <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem;">Captain: <span style="color: var(--text-color);">${t.captain_name}</span></p>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            ${buttons}
+                        </div>
+                    </div>
+                `;
+                });
+
+                // Count accepted teams
+                const acceptedCount = data.filter(t => t.status === 'ACCEPTED').length;
+
+                // Disable generate schedule if there are pending items OR fewer than 3 accepted
+                const generateBtn = document.getElementById("generateScheduleBtn");
+                if (pendingCount > 0) {
+                    generateBtn.style.opacity = "0.5";
+                    generateBtn.style.cursor = "not-allowed";
+                    generateBtn.title = "Wait for all teams to respond or reject them before generating schedule.";
+                    generateBtn.onclick = () => alert("Cannot generate schedule: There are pending team requests or invitations.");
+                } else if (acceptedCount < 3) {
+                    generateBtn.style.opacity = "0.5";
+                    generateBtn.style.cursor = "not-allowed";
+                    generateBtn.title = `Minimum 3 accepted teams required. Currently ${acceptedCount}/3 team(s) accepted.`;
+                    generateBtn.onclick = () => alert(`⚠️ Minimum 3 accepted teams required to generate a schedule.\n\nCurrently ${acceptedCount} team(s) accepted. Please invite and accept at least ${3 - acceptedCount} more team(s).`);
+                    // Show a hint below the button
+                    document.getElementById("teamCountHint").innerText = `⚠️ ${acceptedCount}/3 teams accepted — need ${3 - acceptedCount} more to start`;
+                    document.getElementById("teamCountHint").style.display = "block";
+                } else {
+                    generateBtn.style.opacity = "1";
+                    generateBtn.style.cursor = "pointer";
+                    generateBtn.title = "";
+                    generateBtn.onclick = generateSchedule;
+                    document.getElementById("teamCountHint").style.display = "none";
+                }
+            })
+            .catch(err => console.error("❌ Fetch Error:", err));
+    }
+
+    function updateStatus(teamId, status) {
+        fetch("/update-team-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                tournament_id: tournamentId,
+                team_id: teamId,
+                status: status
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) alert(data.error);
+            else loadTeams();
+        });
+    }
+
+    // ================= DRAFT SCHEDULE =================
+    function loadDraftSchedule() {
+        fetch(`/draft-schedule/${tournamentId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.length > 0) {
+                    document.getElementById("draftScheduleSection").style.display = "block";
+                    document.getElementById("finalizeTournamentBtn").style.display = "block";
+                    document.getElementById("generateScheduleBtn").style.display = "none";
+                    
+                    const list = document.getElementById("draftMatchesList");
+                    list.innerHTML = "";
+
+                    data.forEach(m => {
+                        let stageBadge = m.stage === 'LEAGUE' ? '' : `<span style="background: var(--accent-secondary); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 10px;">${m.stage}</span>`;
+                        
+                        list.innerHTML += `
+                            <div style="background: var(--bg-card); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; font-size: 0.9rem;">
+                                <div style="flex: 2; font-weight: bold; color: var(--text-color); display: flex; align-items: center;">
+                                    ${stageBadge}
+                                    ${m.team1_name} <span style="color:var(--text-muted); margin: 0 5px;">vs</span> ${m.team2_name}
+                                </div>
+                                <div style="flex: 1;">
+                                    <input type="datetime-local" id="date_${m.match_id}" class="custom-input" style="padding: 5px; font-size: 0.85rem;" value="${m.match_date ? m.match_date.slice(0,16) : ''}">
+                                </div>
+                                <div>
+                                    <button onclick="saveDraftMatch(${m.match_id})" style="background: var(--accent-primary); color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer;">Save</button>
+                                    <button onclick="deleteDraftMatch(${m.match_id})" style="background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; padding: 5px 10px; border-radius: 6px; cursor: pointer;">Del</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    document.getElementById("draftScheduleSection").style.display = "none";
+                    document.getElementById("finalizeTournamentBtn").style.display = "none";
+                    document.getElementById("generateScheduleBtn").style.display = "block";
+                }
+            });
+    }
+
+    function generateSchedule() {
+        if (!confirm("This will overwrite any existing draft schedule. Continue?")) return;
+        
+        fetch(`/generate-schedule/${tournamentId}`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) alert(data.error);
+            else loadDraftSchedule();
+        });
+    }
+
+    function saveDraftMatch(matchId) {
+        const dateVal = document.getElementById(`date_${matchId}`).value;
+        fetch(`/update-draft-match/${matchId}`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ match_date: dateVal })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.error) alert(data.error);
+            else alert("Saved!");
+        });
+    }
+
+    function deleteDraftMatch(matchId) {
+        if(!confirm("Remove this match?")) return;
+        fetch(`/delete-draft-match/${matchId}`, { method: "POST" })
+        .then(() => loadDraftSchedule());
+    }
+
+    function finalizeTournament() {
+        if (!confirm("Are you ready to officially start the tournament with this schedule? Teams will no longer be able to join.")) return;
+        
+        fetch(`/finalize-tournament/${tournamentId}`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            if(data.error) alert(data.error);
+            else window.location.href = data.redirect;
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        fetchAllTeams();
+        loadTeams();
+        loadDraftSchedule();
+    });
+</script>
+{% endblock %}

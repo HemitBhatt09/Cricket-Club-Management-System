@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+
+{% block title %}Match Layout{% endblock %}
+{% block header_title %}❖ Schedule & Matches{% endblock %}
+
+{% block content %}
+<style>
+    .glass-panel {
+        background: var(--bg-card);
+        backdrop-filter: var(--glass-blur);
+        padding: 30px;
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--glass-shadow);
+        box-sizing: border-box;
+    }
+
+    .glass-panel h3 {
+        margin-top: 0;
+        color: var(--accent-primary);
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .custom-input {
+        width: 100%;
+        padding: 14px 20px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        background: var(--input-bg);
+        color: var(--text-main);
+        font-family: inherit;
+        font-size: 1rem;
+        outline: none;
+        transition: all 0.3s;
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
+        box-sizing: border-box;
+        margin-bottom: 15px;
+    }
+
+    .custom-input:focus {
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 15px rgba(14, 165, 233, 0.3), inset 0 2px 5px rgba(0, 0, 0, 0.1);
+        background: var(--input-focus-bg);
+    }
+
+    .custom-input option {
+        background: var(--bg-dark);
+        color: var(--text-main);
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 14px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+        color: white;
+        border: none;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);
+        margin-top: 10px;
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 25px rgba(14, 165, 233, 0.5);
+    }
+
+    .submit-btn.alt {
+        background: linear-gradient(135deg, var(--accent-secondary), #059669);
+        color: white;
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+    }
+
+    /* Playing 11 Checkboxes */
+    .checkbox-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+
+    .checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--bg-dark);
+        padding: 10px 15px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+
+    .checkbox-item:hover {
+        border-color: var(--accent-primary);
+    }
+
+    .checkbox-item input {
+        accent-color: var(--accent-primary);
+        width: 18px;
+        height: 18px;
+    }
+
+    .btn-quick-select {
+        background: rgba(14, 165, 233, 0.1);
+        color: var(--accent-primary);
+        border: 1px solid var(--accent-primary);
+        padding: 6px 15px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: bold;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-quick-select:hover {
+        background: var(--accent-primary);
+        color: white;
+        box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
+    }
+
+    /* Match History Full Card */
+    .match-card {
+        background: var(--bg-card);
+        backdrop-filter: var(--glass-blur);
+        padding: 25px;
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        border-left: 5px solid var(--accent-primary);
+        transition: all 0.4s ease;
+        box-shadow: var(--glass-shadow);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .match-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        border-left-color: var(--accent-secondary);
+    }
+
+    .match-card.completed {
+        border-left-color: var(--text-muted);
+    }
+
+    .match-card h5 {
+        color: var(--accent-primary);
+        font-size: 1.3rem;
+        margin: 0 0 10px 0;
+        font-weight: 700;
+    }
+
+    .match-card p {
+        margin: 5px 0;
+        color: var(--text-main);
+        font-size: 0.95rem;
+    }
+</style>
+
+<!-- ================= TOP SECTIONS ================= -->
+
+<!-- SCHEDULE MATCH -->
+<div class="glass-panel" style="max-width: 600px; margin: 0 auto 40px auto;">
+    <h3>1. Schedule New Match</h3>
+
+    <select id="team1" class="custom-input">
+        <option value="" disabled selected>Select Team 1</option>
+    </select>
+
+    <div style="text-align: center; font-weight: bold; color: var(--text-muted); margin-bottom: 15px;">VS</div>
+
+    <select id="team2" class="custom-input">
+        <option value="" disabled selected>Select Team 2</option>
+    </select>
+
+    <input type="date" id="matchDate" class="custom-input">
+
+    <select id="matchType" class="custom-input">
+        <option value="" disabled selected>Select Format</option>
+        <option value="T20">T20</option>
+        <option value="ODI">ODI</option>
+        <option value="TEST">TEST</option>
+    </select>
+
+    <button class="submit-btn" onclick="scheduleMatch()">📅 Schedule Match</button>
+</div>
+
+
+<!-- ================= MATCH LIST ================= -->
+<div class="glass-panel" style="margin-bottom: 50px;">
+    <h3>Match History</h3>
+
+    <div class="nav-toggle" style="margin-bottom: 25px; max-width: 400px;">
+        <input type="radio" class="btn-check" name="matchNav" id="upcomingBtn" checked>
+        <label class="btn-toggle" for="upcomingBtn" onclick="loadUpcoming()">Upcoming</label>
+
+        <input type="radio" class="btn-check" name="matchNav" id="completedBtn">
+        <label class="btn-toggle" for="completedBtn" onclick="loadCompleted()">Completed</label>
+    </div>
+
+    <div id="matchList" class="match-grid"></div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    let currentMatchId = null;
+    let selectedPlaying11 = [];
+    let teamsData = [];
+    let currentTeamPlayers = [];
+
+
+    // ================= LOAD TEAMS =================
+    fetch("/teams")
+        .then(res => res.json())
+        .then(data => {
+
+            teamsData = data;
+
+            const t1 = document.getElementById("team1");
+            const t2 = document.getElementById("team2");
+
+            data.forEach(t => {
+                t1.innerHTML += `<option value="${t.team_id}">${t.team_name}</option>`;
+                t2.innerHTML += `<option value="${t.team_id}">${t.team_name}</option>`;
+            });
+        });
+
+
+    // ================= SCHEDULE MATCH =================
+    function scheduleMatch() {
+
+        const team1El = document.getElementById("team1");
+        const team2El = document.getElementById("team2");
+        const matchDateEl = document.getElementById("matchDate");
+        const matchTypeEl = document.getElementById("matchType");
+        const playingTeamEl = document.getElementById("playingTeam");
+
+        const t1 = parseInt(team1El.value);
+        const t2 = parseInt(team2El.value);
+
+        if (!t1 || !t2 || !matchDateEl.value || !matchTypeEl.value) {
+            return alert("Fill all fields");
+        }
+
+        if (t1 === t2) {
+            return alert("Team 1 and Team 2 cannot be the same!");
+        }
+
+        fetch("/schedule-match", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                team1_id: t1,
+                team2_id: t2,
+                match_date: matchDateEl.value,
+                match_type: matchTypeEl.value
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+
+                if (data.error) return alert(data.error);
+
+                alert("✅ Match Scheduled Successfully! Click 'Start Match' below to proceed to the Toss.");
+
+                // ✅ Clear form fields
+                team1El.value = "";
+                team2El.value = "";
+                matchDateEl.value = "";
+                matchTypeEl.value = "";
+
+                // ✅ Refresh list, then scroll directly to the newly added match (first card)
+                loadUpcoming().then(() => {
+                    const firstCard = document.querySelector("#matchList .match-card");
+                    if (firstCard) {
+                        firstCard.scrollIntoView({ behavior: "smooth", block: "center" });
+                        // Briefly highlight it
+                        firstCard.style.transition = "box-shadow 0.4s ease, border-color 0.4s ease";
+                        firstCard.style.borderLeftColor = "var(--accent-secondary)";
+                        firstCard.style.boxShadow = "0 0 25px rgba(16,185,129,0.4)";
+                        setTimeout(() => {
+                            firstCard.style.borderLeftColor = "";
+                            firstCard.style.boxShadow = "";
+                        }, 2000);
+                    }
+                });
+            });
+    }
+
+
+    // ================= LOAD UPCOMING =================
+    function loadUpcoming() {
+        return fetch("/my-upcoming-matches")
+            .then(res => res.json())
+            .then(matches => {
+
+                const div = document.getElementById("matchList");
+                div.innerHTML = "";
+
+                if (matches.length === 0) {
+                    div.innerHTML = "<p style='color: var(--text-muted);'>No upcoming matches scheduled.</p>";
+                    return;
+                }
+
+                matches.forEach(m => {
+                    div.innerHTML += `
+                <div class="match-card">
+                    <div>
+                        <h5 style="color: var(--accent-primary)">${m.team1_name} vs ${m.team2_name}</h5>
+                        <p>📅 ${m.match_date} | 🏏 ${m.match_type}</p>
+                    </div>
+                    
+                    <button class="submit-btn" style="padding: 10px; font-size: 0.9rem;"
+                        onclick="startLiveScoring(${m.match_id})">
+                        Start Match
+                    </button>
+                </div>
+            `;
+                });
+            });
+    }
+
+
+    // ================= LOAD COMPLETED =================
+    function loadCompleted() {
+
+        fetch("/my-completed-matches")
+            .then(res => res.json())
+            .then(matches => {
+
+                const div = document.getElementById("matchList");
+                div.innerHTML = "";
+
+                if (matches.length === 0) {
+                    div.innerHTML = "<p style='color: var(--text-muted);'>No completed matches found.</p>";
+                    return;
+                }
+
+                matches.forEach(m => {
+                    div.innerHTML += `
+                <div class="match-card completed">
+                    <div>
+                        <h5 style="color: var(--text-muted)">${m.team1_name} vs ${m.team2_name}</h5>
+                        
+                        <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px; margin: 10px 0;">
+                            <p style="margin:0; font-weight: bold; font-size:1.1rem;">
+                                ${m.team1_name}: ${m.team1_score !== null ? m.team1_score : '-'}/${m.team1_wickets !== null ? m.team1_wickets : '-'} 
+                                <span style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">(${m.team1_overs !== null ? Number(m.team1_overs).toFixed(1) : '-'} ov)</span>
+                            </p>
+                            <p style="margin:5px 0 0 0; font-weight: bold; font-size:1.1rem;">
+                                ${m.team2_name}: ${m.team2_score !== null ? m.team2_score : '-'}/${m.team2_wickets !== null ? m.team2_wickets : '-'} 
+                                <span style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">(${m.team2_overs !== null ? Number(m.team2_overs).toFixed(1) : '-'} ov)</span>
+                            </p>
+                        </div>
+
+                        <p><strong class="text-success">Winner:</strong> ${m.is_completed ? m.winner : "Not completed"}</p>
+                    </div>
+
+                    <button onclick="viewScorecard(${m.match_id})" 
+                            class="submit-btn alt" style="padding: 10px; font-size: 0.9rem;">
+                        View Scorecard
+                    </button>
+                </div>
+            `;
+                });
+            });
+    }
+
+
+    // ================= REDIRECT =================
+    function startLiveScoring(matchId) {
+        window.location.href = `/toss/${matchId}`;
+    }
+
+
+    function viewScorecard(matchId) {
+        window.location.href = `/scorecard?match_id=${matchId}`;
+    }
+
+
+    // ================= AUTO LOAD =================
+    loadUpcoming();
+
+</script>
+{% endblock %}

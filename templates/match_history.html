@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+
+{% block title %}Match History - CCMS{% endblock %}
+
+{% block header_title %}📅 Match History{% endblock %}
+
+{% block head %}
+<style>
+/* ===== FILTER BAR ===== */
+.filter-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px 20px;
+    box-shadow: var(--glass-shadow);
+}
+.filter-bar label {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    white-space: nowrap;
+}
+.filter-select {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-color);
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    min-width: 140px;
+}
+.filter-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+.filter-search {
+    flex: 1;
+    min-width: 160px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-color);
+    font-size: 0.88rem;
+    transition: border-color 0.2s;
+}
+.filter-search:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+.filter-search::placeholder {
+    color: var(--text-muted);
+}
+
+/* ===== SUMMARY STATS ===== */
+.summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+}
+.summary-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 18px 14px;
+    text-align: center;
+    box-shadow: var(--glass-shadow);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+.summary-card:hover { transform: translateY(-4px); }
+.summary-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 4px;
+}
+.summary-card.total::before  { background: var(--accent-primary); }
+.summary-card.wins::before   { background: #10b981; }
+.summary-card.losses::before { background: #ef4444; }
+.summary-card.draws::before  { background: #f59e0b; }
+.summary-val {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-color);
+    line-height: 1;
+    margin-bottom: 6px;
+}
+.summary-card.wins   .summary-val { color: #10b981; }
+.summary-card.losses .summary-val { color: #ef4444; }
+.summary-card.draws  .summary-val { color: #f59e0b; }
+.summary-lbl {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.9px;
+    font-weight: 600;
+}
+
+/* ===== WIN RATE BAR ===== */
+.winrate-bar-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    box-shadow: var(--glass-shadow);
+}
+.winrate-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.winrate-label-row span {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+}
+.winrate-label-row strong {
+    color: var(--accent-primary);
+    font-size: 1.1rem;
+}
+.winrate-bar {
+    width: 100%;
+    height: 10px;
+    background: var(--bg-input);
+    border-radius: 99px;
+    overflow: hidden;
+}
+.winrate-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #10b981, var(--accent-primary));
+    transition: width 0.8s ease;
+}
+
+/* ===== MATCH CARDS ===== */
+.match-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px 25px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: var(--glass-shadow);
+    position: relative;
+    overflow: hidden;
+}
+.match-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: #10b981;
+    border-radius: 4px 0 0 4px;
+}
+.match-card.lost::before  { background: #ef4444; }
+.match-card.draw::before  { background: #f59e0b; }
+.match-card:hover {
+    transform: translateX(4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.match-teams { flex: 1; min-width: 200px; }
+.match-teams .vs-line {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 6px;
+}
+.match-score-block {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.match-score-item { text-align: center; }
+.match-score-item .score-val {
+    font-size: 1.15rem;
+    font-weight: bold;
+    color: var(--accent-primary);
+    display: block;
+}
+.match-score-item .score-lbl {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+.result-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: bold;
+    white-space: nowrap;
+}
+.result-badge.won  { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.4); }
+.result-badge.lost { background: rgba(239,68,68,0.15);  color: #ef4444; border: 1px solid rgba(239,68,68,0.4); }
+.result-badge.draw { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.4); }
+.scorecard-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(14,165,233,0.1);
+    border: 1px solid var(--accent-primary);
+    color: var(--accent-primary);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.scorecard-link:hover {
+    background: var(--accent-primary);
+    color: white;
+    transform: scale(1.04);
+}
+.match-type-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(14,165,233,0.12);
+    color: var(--accent-primary);
+    border: 1px solid rgba(14,165,233,0.3);
+    margin-bottom: 4px;
+}
+.no-matches-msg {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 60px 20px;
+    background: var(--bg-card);
+    border-radius: 14px;
+    border: 1px dashed var(--border-color);
+    font-size: 1.05rem;
+}
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 9px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    margin-bottom: 22px;
+}
+.back-btn:hover {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+    transform: translateX(-3px);
+}
+.results-count {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    font-weight: 500;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<a href="/profile/{{ history_user_id }}" class="back-btn">← Back to Profile</a>
+
+<!-- Summary Stats -->
+<div class="summary-row" id="summaryRow">
+    <div class="summary-card total">
+        <div class="summary-val" id="sumTotal">—</div>
+        <div class="summary-lbl">Matches</div>
+    </div>
+    <div class="summary-card wins">
+        <div class="summary-val" id="sumWins">—</div>
+        <div class="summary-lbl">Wins</div>
+    </div>
+    <div class="summary-card losses">
+        <div class="summary-val" id="sumLosses">—</div>
+        <div class="summary-lbl">Losses</div>
+    </div>
+    <div class="summary-card draws">
+        <div class="summary-val" id="sumDraws">—</div>
+        <div class="summary-lbl">Draws</div>
+    </div>
+</div>
+
+<!-- Win Rate Bar -->
+<div class="winrate-bar-wrap" id="winrateWrap" style="display:none;">
+    <div class="winrate-label-row">
+        <span>Win Rate</span>
+        <strong id="winratePct">0%</strong>
+    </div>
+    <div class="winrate-bar">
+        <div class="winrate-fill" id="winrateFill" style="width:0%"></div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <label>Filter:</label>
+    <select class="filter-select" id="filterResult" onchange="applyFilters()">
+        <option value="">All Results</option>
+        <option value="won">Wins</option>
+        <option value="lost">Losses</option>
+        <option value="draw">Draws</option>
+    </select>
+    <select class="filter-select" id="filterType" onchange="applyFilters()">
+        <option value="">All Types</option>
+        <option value="T20">T20</option>
+        <option value="ODI">ODI</option>
+        <option value="Test">Test</option>
+    </select>
+    <select class="filter-select" id="filterTourney" onchange="applyFilters()">
+        <option value="">All Matches</option>
+        <option value="tournament">Tournament</option>
+        <option value="friendly">Friendly</option>
+    </select>
+    <input type="text" class="filter-search" id="filterSearch" placeholder="🔍 Search team name…" oninput="applyFilters()">
+</div>
+
+<div class="results-count" id="resultsCount"></div>
+
+<!-- Match List -->
+<div id="matchHistoryList">
+    <div class="no-matches-msg">⏳ Loading match history…</div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allMatches = [];
+
+function loadMatchHistory() {
+    const container = document.getElementById('matchHistoryList');
+    fetch('/player-matches?user_id={{ history_user_id }}')
+    .then(res => {
+        if (!res.ok) {
+            if (res.status === 401) {
+                container.innerHTML = `<div class="no-matches-msg">🔒 Please log in to view match history.</div>`;
+                return null;
+            }
+            throw new Error('HTTP ' + res.status);
+        }
+        return res.json();
+    })
+    .then(matches => {
+        if (!matches) return;
+        allMatches = matches;
+        updateSummary(matches);
+        renderMatches(matches);
+    })
+    .catch(err => {
+        console.error('Match history error:', err);
+        container.innerHTML = `<div class="no-matches-msg" style="color:#ef4444;">❌ Failed to load match history.</div>`;
+    });
+}
+
+function updateSummary(matches) {
+    let wins = 0, losses = 0, draws = 0;
+    matches.forEach(m => {
+        const isDraw = m.winner === 'DRAW';
+        let userTeamName = '';
+        if (m.user_team_id == m.team1_id) userTeamName = m.team1_name;
+        else if (m.user_team_id == m.team2_id) userTeamName = m.team2_name;
+
+        if (isDraw) draws++;
+        else if (m.winner && userTeamName && m.winner === userTeamName) wins++;
+        else losses++;
+    });
+
+    document.getElementById('sumTotal').textContent   = matches.length;
+    document.getElementById('sumWins').textContent    = wins;
+    document.getElementById('sumLosses').textContent  = losses;
+    document.getElementById('sumDraws').textContent   = draws;
+
+    if (matches.length > 0) {
+        const pct = Math.round((wins / matches.length) * 100);
+        document.getElementById('winratePct').textContent    = pct + '%';
+        document.getElementById('winrateFill').style.width   = pct + '%';
+        document.getElementById('winrateWrap').style.display = 'block';
+    }
+}
+
+function getMatchResult(m) {
+    const isDraw = m.winner === 'DRAW';
+    let userTeamName = '';
+    if (m.user_team_id == m.team1_id) userTeamName = m.team1_name;
+    else if (m.user_team_id == m.team2_id) userTeamName = m.team2_name;
+
+    if (isDraw) return 'draw';
+    if (m.winner && userTeamName && m.winner === userTeamName) return 'won';
+    return 'lost';
+}
+
+function applyFilters() {
+    const filterResult = document.getElementById('filterResult').value;
+    const filterType   = document.getElementById('filterType').value;
+    const filterTourney = document.getElementById('filterTourney').value;
+    const search       = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+    const filtered = allMatches.filter(m => {
+        const result = getMatchResult(m);
+        if (filterResult && result !== filterResult) return false;
+        if (filterType && m.match_type !== filterType) return false;
+        if (filterTourney === 'tournament' && !m.tournament_id) return false;
+        if (filterTourney === 'friendly' && m.tournament_id) return false;
+        if (search) {
+            const t1 = (m.team1_name || '').toLowerCase();
+            const t2 = (m.team2_name || '').toLowerCase();
+            if (!t1.includes(search) && !t2.includes(search)) return false;
+        }
+        return true;
+    });
+
+    renderMatches(filtered);
+}
+
+function renderMatches(matches) {
+    const container = document.getElementById('matchHistoryList');
+    const countEl   = document.getElementById('resultsCount');
+
+    if (!Array.isArray(matches) || matches.length === 0) {
+        container.innerHTML = `<div class="no-matches-msg">🏏 No matches found for the selected filters.</div>`;
+        countEl.textContent = '';
+        return;
+    }
+
+    countEl.textContent = `Showing ${matches.length} match${matches.length !== 1 ? 'es' : ''}`;
+
+    container.innerHTML = matches.map(m => {
+        const result   = getMatchResult(m);
+        const isDraw   = result === 'draw';
+        const isWon    = result === 'won';
+
+        const resultBadgeClass = result;
+        const resultIcon = isDraw ? '🤝' : isWon ? '🏆' : '❌';
+        const cardClass  = result === 'won' ? '' : result; // '' for won (green left bar default)
+
+        const resultText = isDraw ? 'DRAW' : (m.winner || 'N/A');
+        const date = m.match_date
+            ? new Date(m.match_date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
+            : 'N/A';
+        const stage = m.stage ? `<span style="color:var(--text-muted); font-size:0.78rem;"> · ${m.stage}</span>` : '';
+        const tourneyTag = m.tournament_id
+            ? `<span style="color:#a78bfa; font-size:0.75rem; margin-left:6px;">🏆 Tournament</span>`
+            : `<span style="color:#6ee7b7; font-size:0.75rem; margin-left:6px;">🤝 Friendly</span>`;
+
+        return `
+        <div class="match-card ${cardClass}">
+            <div class="match-teams">
+                <div style="margin-bottom:4px;">
+                    <span class="match-type-tag">${m.match_type || 'T20'}</span>${tourneyTag}
+                </div>
+                <div class="vs-line">${m.team1_name} <span style="color:var(--text-muted);font-size:0.85rem;">vs</span> ${m.team2_name}</div>
+                <div style="font-size:0.8rem; color:var(--text-muted); margin-top:3px;">📅 ${date}${stage}</div>
+            </div>
+
+            <div class="match-score-block">
+                <div class="match-score-item">
+                    <span class="score-val">${m.team1_score}/${m.team1_wickets}</span>
+                    <span class="score-lbl">${m.team1_name}<br>(${m.team1_overs} ov)</span>
+                </div>
+                <div style="color:var(--text-muted); font-size:1.2rem;">|</div>
+                <div class="match-score-item">
+                    <span class="score-val">${m.team2_score}/${m.team2_wickets}</span>
+                    <span class="score-lbl">${m.team2_name}<br>(${m.team2_overs} ov)</span>
+                </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+                <span class="result-badge ${resultBadgeClass}">
+                    ${resultIcon} ${resultText}
+                </span>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                    <a href="/scorecard?match_id=${m.match_id}" class="scorecard-link">📋 Scorecard</a>
+                    ${m.tournament_id ? `<a href="/tournament/${m.tournament_id}/matches" class="scorecard-link" style="background: rgba(167, 139, 250, 0.1); border-color: #a78bfa; color: #a78bfa;">🏆 Tournament</a>` : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', loadMatchHistory);
+</script>
+{% endblock %}

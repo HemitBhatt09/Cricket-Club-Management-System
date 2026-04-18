@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cricket Club | Auth</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Using our global css for variables -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <!-- Poppins Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            background: var(--body-bg);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Video Background */
+        #videoIntro {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+        }
+        #videoIntro::after {
+            content: '';
+            position: absolute;
+            top:0; left:0; right:0; bottom:0;
+            background: rgba(15, 23, 42, 0.7); /* Dark overlay so video doesn't overpower */
+            backdrop-filter: blur(5px);
+        }
+        #introVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Card Container */
+        .auth-wrapper {
+            perspective: 1500px;
+            width: 100%;
+            max-width: 450px;
+            z-index: 10;
+        }
+
+        /* Inner flip container */
+        .flip-card {
+            width: 100%;
+            height: 600px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .flip-card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        /* Front & Back Faces */
+        .flip-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            background: var(--bg-card);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            padding: 40px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        .flip-back {
+            transform: rotateY(180deg);
+        }
+
+        /* Toggle Buttons */
+        .toggle-group {
+            display: flex;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 5px;
+            margin-bottom: 30px;
+        }
+        .toggle-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .toggle-btn.active {
+            background: var(--accent-primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+        }
+
+        .auth-title {
+            text-align: center;
+            font-size: 2rem;
+            color: var(--accent-primary);
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        /* Inputs */
+        .custom-input {
+            width: 100%;
+            padding: 15px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(30, 41, 59, 0.6);
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        .custom-input:focus {
+            border-color: var(--accent-primary);
+            background: rgba(30, 41, 59, 0.8);
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+        }
+        .custom-input option {
+            background: var(--bg-dark);
+            color: white;
+        }
+
+        /* Submit Button */
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent-secondary), #059669);
+            color: white;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+            margin-top: 10px;
+        }
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(16, 185, 129, 0.5);
+        }
+
+    </style>
+</head>
+
+<body>
+
+<!-- ================= VIDEO INTRO ================= -->
+<div id="videoIntro">
+    <video id="introVideo" autoplay muted playsinline loop>
+        <source src="{{ url_for('static', filename='video/intro.mp4') }}" type="video/mp4">
+    </video>
+</div>
+
+<!-- ================= MAIN CONTENT ================= -->
+<div class="auth-wrapper" id="mainContent" style="display: none;">
+    <div class="flip-card" id="flipCard">
+
+        <!-- LOG IN FACE -->
+        <div class="flip-face flip-front">
+            <!-- Toggle -->
+            <div class="toggle-group">
+                <button class="toggle-btn active">Login</button>
+                <button class="toggle-btn" onclick="flipCard()">Signup</button>
+            </div>
+
+            <h2 class="auth-title">Welcome Back</h2>
+
+            <input type="text" id="loginName" placeholder="Name" class="custom-input">
+            <input type="text" id="loginMobile" placeholder="Mobile Number" class="custom-input">
+            <input type="password" id="loginPassword" placeholder="Password" class="custom-input">
+
+            <div style="flex-grow: 1;"></div>
+            
+            <button class="submit-btn" onclick="login()">Log In</button>
+        </div>
+
+        <!-- SIGN UP FACE -->
+        <div class="flip-face flip-back">
+            <!-- Toggle -->
+            <div class="toggle-group">
+                <button class="toggle-btn" onclick="flipCard()">Login</button>
+                <button class="toggle-btn active">Signup</button>
+            </div>
+
+            <h2 class="auth-title">Join Club</h2>
+
+            <input type="text" id="name" placeholder="Name" class="custom-input">
+            <input type="text" id="mobile" placeholder="Mobile Number" class="custom-input">
+            <input type="password" id="password" placeholder="Password" class="custom-input">
+
+            <select id="role" class="custom-input">
+                <option value="batsman">Batsman</option>
+                <option value="bowler">Bowler</option>
+                <option value="all-rounder">All-rounder</option>
+            </select>
+
+            <div style="flex-grow: 1;"></div>
+
+            <button class="submit-btn" onclick="signup()">Create Account</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- JS -->
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script>
+    // Failsafe if script.js logic misses video sync
+    const video = document.getElementById("introVideo");
+    const mainContent = document.getElementById("mainContent");
+
+    // Optional: wait a bit and show form instead of relying strictly on video logic
+    setTimeout(() => {
+        mainContent.style.display = "block";
+    }, 1500); // adjust timing as needed
+
+    function flipCard() {
+        document.getElementById("flipCard").classList.toggle("flipped");
+    }
+
+    // ===== ENTER KEY SUPPORT =====
+    // Login form — pressing Enter on any field triggers login
+    ["loginName", "loginMobile", "loginPassword"].forEach(id => {
+        document.getElementById(id).addEventListener("keydown", function(e) {
+            if (e.key === "Enter") login();
+        });
+    });
+
+    // Signup form — pressing Enter on any field triggers signup
+    ["name", "mobile", "password"].forEach(id => {
+        document.getElementById(id).addEventListener("keydown", function(e) {
+            if (e.key === "Enter") signup();
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+
+{% block title %}Select Players{% endblock %}
+{% block header_title %}❖ Select Opening Players{% endblock %}
+
+{% block content %}
+<style>
+.select-container {
+    background: var(--bg-card);
+    backdrop-filter: var(--glass-blur);
+    padding: 40px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--glass-shadow);
+    max-width: 600px;
+    margin: 0 auto;
+}
+.select-container h3 {
+    color: var(--accent-primary);
+    margin-top: 0;
+    margin-bottom: 25px;
+    font-size: 1.5rem;
+    text-align: center;
+}
+.form-group {
+    margin-bottom: 25px;
+}
+.form-group label {
+    display: block;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+.custom-input {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--input-bg);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.3s;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+    box-sizing: border-box;
+}
+.custom-input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 15px rgba(14, 165, 233, 0.3), inset 0 2px 5px rgba(0,0,0,0.1);
+    background: var(--input-focus-bg);
+}
+.custom-input option {
+    background: var(--bg-dark);
+    color: var(--text-main);
+}
+.submit-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent-secondary), #059669);
+    color: white;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+    margin-top: 10px;
+}
+.submit-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 25px rgba(16, 185, 129, 0.5);
+}
+</style>
+
+<div class="select-container">
+
+    <h3>Innings Start Details</h3>
+
+    <!-- BATTING -->
+    <div style="background: rgba(0,0,0,0.1); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px dashed var(--border-color);">
+        <h4 style="color: var(--text-main); margin-top: 0; margin-bottom: 15px; font-size: 1.2rem;">🏏 Batting Team</h4>
+        
+        <div class="form-group">
+            <label>Striker</label>
+            <select id="striker" class="custom-input">
+                <option value="" disabled selected>Select Striker</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+            <label>Non-Striker</label>
+            <select id="nonStriker" class="custom-input">
+                <option value="" disabled selected>Select Non-Striker</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- BOWLER -->
+    <div style="background: rgba(0,0,0,0.1); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px dashed var(--border-color);">
+        <h4 style="color: #ef4444; margin-top: 0; margin-bottom: 15px; font-size: 1.2rem;">⚾ Bowling Team</h4>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+            <label>Opening Bowler</label>
+            <select id="bowler" class="custom-input">
+                <option value="" disabled selected>Select Bowler</option>
+            </select>
+        </div>
+    </div>
+
+    <button class="submit-btn" onclick="startInnings()">▶️ Start Innings</button>
+
+</div>
+
+<!-- SAFE DATA -->
+<script id="data" type="application/json">
+{
+    "match": {{ match | tojson }},
+    "batting": {{ batting_players | tojson }},
+    "bowling": {{ bowling_players | tojson }}
+}
+</script>
+
+<script>
+let data = JSON.parse(document.getElementById("data").textContent);
+
+let matchData = data.match;
+let battingPlayers = data.batting;
+let bowlingPlayers = data.bowling;
+
+let strikerEl = document.getElementById("striker");
+let nonStrikerEl = document.getElementById("nonStriker");
+let bowlerEl = document.getElementById("bowler");
+
+// ================= LOAD OPTIONS =================
+if (battingPlayers.length === 0 || bowlingPlayers.length === 0) {
+    alert("⚠️ Missing Playing 11! Please go back to the Match page and ensure BOTH teams have exactly 11 players registered.");
+}
+
+battingPlayers.forEach(p => {
+    let opt1 = document.createElement("option");
+    opt1.value = p.user_id;
+    opt1.textContent = p.name;
+    strikerEl.appendChild(opt1);
+
+    let opt2 = document.createElement("option");
+    opt2.value = p.user_id;
+    opt2.textContent = p.name;
+    nonStrikerEl.appendChild(opt2);
+});
+
+bowlingPlayers.forEach(p => {
+    let opt = document.createElement("option");
+    opt.value = p.user_id;
+    opt.textContent = p.name;
+    bowlerEl.appendChild(opt);
+});
+
+// ✅ Auto-scroll to Start button after bowler is chosen
+bowlerEl.addEventListener("change", function () {
+    if (this.value) {
+        document.querySelector(".submit-btn").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+});
+
+// ================= START =================
+function startInnings() {
+
+    let s = parseInt(strikerEl.value);
+    let ns = parseInt(nonStrikerEl.value);
+    let b = parseInt(bowlerEl.value);
+
+    if (!s || !ns || !b) {
+        return alert("Please select all three players.");
+    }
+
+    if (s === ns) {
+        return alert("Striker and non-striker must be different players");
+    }
+
+    fetch("/start-innings", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            match_id: matchData.match_id,
+            striker: s,
+            non_striker: ns,
+            bowler: b
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message || data.error);
+
+        if (!data.error) {
+            window.location.href = `/live-score/${matchData.match_id}`;
+        }
+    });
+}
+</script>
+{% endblock %}

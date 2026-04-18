@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+
+{% block title %}Tournament Matches - CCMS{% endblock %}
+
+{% block header_title %}Tournament Control Panel{% endblock %}
+
+{% block content %}
+<div class="form-section" style="max-width: 960px; margin: 0 auto;">
+
+    <!-- ===== WINNER BANNER (shown when tournament complete) ===== -->
+    <div id="winnerBanner" style="display:none; margin-bottom: 30px;
+        background: linear-gradient(135deg, rgba(15,23,42,0.97), rgba(30,41,59,0.97));
+        border: 1px solid gold;
+        border-radius: 20px;
+        padding: 35px 30px;
+        text-align: center;
+        box-shadow: 0 0 50px rgba(255,215,0,0.25);
+        animation: slideDown 0.5s ease;">
+
+        <div style="font-size: 3rem; margin-bottom: 10px; animation: pulse 2s infinite;">🏆</div>
+        <h2 style="color: gold; font-size: 1.8rem; margin: 0 0 5px 0; text-shadow: 0 0 15px rgba(255,215,0,0.4);">Tournament Champion</h2>
+        <h1 id="bannerWinner" style="color: white; font-size: 2.5rem; margin: 0 0 25px 0; font-weight: 800;"></h1>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; max-width: 800px; margin: 0 auto 25px auto;">
+            <div style="background: rgba(234,179,8,0.15); border: 1px solid rgba(234,179,8,0.4); border-radius: 12px; padding: 18px; box-shadow: 0 0 15px rgba(255,215,0,0.1);">
+                <div style="font-size: 1.5rem; margin-bottom: 5px;">👑</div>
+                <p style="color: gold; font-size: 0.85rem; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Man of the Tournament</p>
+                <p id="bannerMottName" style="color: white; font-weight: bold; font-size: 1.2rem; margin: 0;"></p>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 18px;">
+                <div style="font-size: 1.5rem; margin-bottom: 5px;">🏏</div>
+                <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Highest Scorer</p>
+                <p id="bannerTopScorer" style="color: white; font-weight: bold; font-size: 1rem; margin: 0;"></p>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 18px;">
+                <div style="font-size: 1.5rem; margin-bottom: 5px;">⚾</div>
+                <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Top Wicket Taker</p>
+                <p id="bannerTopWicket" style="color: white; font-weight: bold; font-size: 1rem; margin: 0;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔥 SWITCH BUTTONS -->
+    <div style="display: flex; gap: 12px; margin-bottom: 25px; flex-wrap: wrap;">
+        <button id="btn-upcoming" class="submit-btn" style="width:auto; padding:10px 22px; margin:0;" onclick="showTab('upcoming')">Upcoming Matches</button>
+        <button id="btn-completed" class="submit-btn" style="width:auto; padding:10px 22px; margin:0;" onclick="showTab('completed')">Completed</button>
+        <button id="btn-points" class="submit-btn" style="width:auto; padding:10px 22px; margin:0;" onclick="showTab('points')">Points Table</button>
+        <button id="btn-stats" class="submit-btn" style="width:auto; padding:10px 22px; margin:0;" onclick="showTab('stats')">Stats</button>
+    </div>
+
+    <hr style="border-color: rgba(255,255,255,0.1); margin-bottom: 25px;">
+
+    <div id="matchList" style="display: flex; flex-direction: column; gap: 15px;"></div>
+
+</div>
+
+<style>
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+@media (max-width: 850px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const path = window.location.pathname.split("/");
+    const tournamentId = path[path.length - 2];
+    
+    let isTournamentCompleted = false;
+
+    // ===== LOAD TOURNAMENT STATS & WINNER BANNER =====
+    function loadTournamentStats() {
+        fetch(`/tournament-stats/${tournamentId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data || data.error) return;
+
+                isTournamentCompleted = data.is_completed;
+
+                if (data.is_completed && data.final_winner) {
+                    const banner = document.getElementById("winnerBanner");
+                    banner.style.display = "block";
+                    document.getElementById("bannerWinner").innerText = data.final_winner;
+                    document.getElementById("bannerMottName").innerText = data.man_of_tournament_name || "N/A";
+
+                    if (data.top_scorer) {
+                        document.getElementById("bannerTopScorer").innerText =
+                            `${data.top_scorer.name} — ${data.top_scorer.total_runs} runs`;
+                    } else {
+                        document.getElementById("bannerTopScorer").innerText = "N/A";
+                    }
+
+                    if (data.top_wicket_taker) {
+                        document.getElementById("bannerTopWicket").innerText =
+                            `${data.top_wicket_taker.name} — ${data.top_wicket_taker.wickets} wkts`;
+                    } else {
+                        document.getElementById("bannerTopWicket").innerText = "N/A";
+                    }
+                }
+            });
+    }
+
+    function setActiveButton(type) {
+        ['upcoming', 'completed', 'points', 'stats'].forEach(t => {
+            const btn = document.getElementById(`btn-${t}`);
+            if (t === type) {
+                btn.style.background = 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))';
+                btn.style.color = 'white';
+                btn.style.borderColor = 'transparent';
+                btn.style.boxShadow = '0 8px 20px rgba(14,165,233,0.35)';
+            } else {
+                btn.style.background = 'var(--bg-card)';
+                btn.style.color = 'var(--text-muted)';
+                btn.style.borderColor = 'var(--border-color)';
+                btn.style.boxShadow = 'none';
+            }
+        });
+    }
+
+    function showTab(type) {
+        setActiveButton(type);
+        if (type === "upcoming") loadUpcoming();
+        if (type === "completed") loadCompleted();
+        if (type === "points") loadPoints();
+        if (type === "stats") loadStats();
+    }
+
+    // ================= UPCOMING =================
+    function loadUpcoming() {
+        fetch(`/tournament-upcoming/${tournamentId}`)
+            .then(res => res.json())
+            .then(matches => {
+                const div = document.getElementById("matchList");
+
+                const hasLeague = matches.some(m => m.stage === 'LEAGUE');
+                const hasSemi   = matches.some(m => m.stage === 'SEMI');
+                const hasFinal  = matches.some(m => m.stage === 'FINAL');
+
+                // No pending matches at all → try auto knockout generation
+                // This fires when: (1) all league done, (2) all semis done
+                if (!hasLeague && !hasSemi && !hasFinal) {
+                    fetch(`/auto-generate-knockouts/${tournamentId}`, { method: "POST" })
+                        .then(r => r.json())
+                        .then(() => fetch(`/tournament-upcoming/${tournamentId}`).then(r => r.json()))
+                        .then(m2 => {
+                            if (!m2 || m2.length === 0) {
+                                div.innerHTML = "<p style='color:var(--text-muted);padding:20px;text-align:center;'>🏆 All matches completed!</p>";
+                            } else {
+                                renderUpcomingMatches(m2);
+                            }
+                        })
+                        .catch(() => {
+                            div.innerHTML = "<p style='color:var(--text-muted);padding:20px;text-align:center;'>No upcoming matches.</p>";
+                        });
+                    return;
+                }
+
+                renderUpcomingMatches(matches);
+            });
+    }
+
+    function stageLabel(stage) {
+        if (stage === 'SEMI') return { text: 'Semi Final', color: '#f59e0b' };
+        if (stage === 'FINAL') return { text: '🏆 Final', color: 'gold' };
+        return { text: 'League', color: 'var(--accent-primary)' };
+    }
+
+    function renderUpcomingMatches(matches) {
+        const div = document.getElementById("matchList");
+        div.innerHTML = "";
+
+        matches.forEach(m => {
+            const sl = stageLabel(m.stage);
+            div.innerHTML += `
+                <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px 25px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--glass-shadow); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                    <div>
+                        <span style="background: rgba(14,165,233,0.1); color: ${sl.color}; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: bold; border: 1px solid ${sl.color}33;">${sl.text}</span>
+                        <h5 style="color: var(--text-color); font-size: 1.2rem; margin: 8px 0 0 0;">${m.team1} <span style="color:var(--text-muted); font-size:0.95rem; margin: 0 8px;">vs</span> ${m.team2}</h5>
+                    </div>
+                    ${
+                        m.is_host === true 
+                        ? `<button class="submit-btn" style="width: auto; padding: 10px 22px; margin: 0;" onclick="startMatch(${m.match_id})">Start →</button>` 
+                        : ``
+                    }
+                </div>
+            `;
+        });
+    }
+
+    function loadPoints() {
+        fetch(`/points-table/${tournamentId}`)
+            .then(res => res.json())
+            .then(data => {
+                let div = document.getElementById("matchList");
+                let html = `
+                <div style="overflow-x: auto; border-radius: 14px; overflow: hidden; box-shadow: var(--glass-shadow);">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; background: var(--bg-card);">
+                    <thead>
+                        <tr style="background: var(--bg-input); border-bottom: 2px solid var(--border-color); color: var(--text-muted); text-transform: uppercase; font-size: 0.82rem; letter-spacing: 1px;">
+                            <th style="padding: 15px 20px;">#</th>
+                            <th style="padding: 15px;">Team</th>
+                            <th style="padding: 15px;">P</th>
+                            <th style="padding: 15px;">W</th>
+                            <th style="padding: 15px;">L</th>
+                            <th style="padding: 15px; color: var(--accent-primary);">Pts</th>
+                            <th style="padding: 15px;">NRR</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+
+                data.forEach((t, i) => {
+                    const rowBg = i === 0 ? 'rgba(255,215,0,0.04)' : '';
+                    const rankStyle = i === 0 ? 'color: gold; font-weight: 900;' : 'color: var(--text-muted);';
+                    html += `
+                        <tr style="border-bottom: 1px solid var(--border-color); background: ${rowBg};">
+                            <td style="padding: 14px 20px; ${rankStyle}">${i + 1}</td>
+                            <td style="padding: 14px; font-weight: bold; color: var(--text-color);">${t.team_name}</td>
+                            <td style="padding: 14px; color: var(--text-color);">${t.matches_played}</td>
+                            <td style="padding: 14px; color: #22c55e;">${t.wins}</td>
+                            <td style="padding: 14px; color: #ef4444;">${t.losses}</td>
+                            <td style="padding: 14px; font-weight: bold; color: var(--accent-primary);">${t.points}</td>
+                            <td style="padding: 14px; color: var(--text-color);">${(t.nrr || 0).toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table></div>`;
+                div.innerHTML = html;
+            });
+    }
+
+    // ================= STATS (LEADERBOARDS) =================
+    function loadStats() {
+        fetch(`/tournament-leaderboards/${tournamentId}`)
+            .then(res => res.json())
+            .then(data => {
+                let div = document.getElementById("matchList");
+                let html = `<div class="stats-grid">`;
+                
+                // Batsmen Grid
+                html += `
+                <div style="background: var(--bg-card); border-radius: 14px; overflow: hidden; box-shadow: var(--glass-shadow); align-self: start;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="background: rgba(14, 165, 233, 0.1); border-bottom: 2px solid var(--accent-primary); color: var(--accent-primary); text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px;">
+                            <th colspan="4" style="padding: 15px; text-align: center; font-size: 1rem; font-weight: bold;">🏏 Most Runs</th>
+                        </tr>
+                        <tr style="background: var(--bg-input); border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem;">
+                            <th style="padding: 10px 15px;">Player</th>
+                            <th style="padding: 10px 15px; text-align: right;">Runs</th>
+                            <th style="padding: 10px 15px; text-align: right;">Balls</th>
+                            <th style="padding: 10px 15px; text-align: right;">SR</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+                if (!data.top_batsmen || data.top_batsmen.length === 0) {
+                     html += `<tr><td colspan="4" style="padding: 20px; text-align: center; color: var(--text-muted);">No batting stats yet.</td></tr>`;
+                } else {
+                     data.top_batsmen.forEach((p, i) => {
+                         const rankStyle = i === 0 ? 'color: gold; font-weight: bold;' : 'color: var(--text-color); font-weight: 500;';
+                         html += `
+                            <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;" onmouseover="this.style.background='var(--bg-input)'" onmouseout="this.style.background='transparent'">
+                                <td style="padding: 12px 15px;">
+                                    <div style="${rankStyle} font-size: 1.05rem;">${i+1}. ${p.name}</div>
+                                    <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 2px;">${p.team_name}</div>
+                                </td>
+                                <td style="padding: 12px 15px; text-align: right; font-weight: 800; color: var(--text-color); font-size: 1.1rem;">${p.runs}</td>
+                                <td style="padding: 12px 15px; text-align: right; color: var(--text-muted);">${p.balls}</td>
+                                <td style="padding: 12px 15px; text-align: right; color: var(--text-muted);">${Number(p.strike_rate || 0).toFixed(1)}</td>
+                            </tr>
+                         `;
+                     });
+                }
+                
+                html += `</tbody></table></div>`;
+                
+                // Bowlers Grid
+                html += `
+                <div style="background: var(--bg-card); border-radius: 14px; overflow: hidden; box-shadow: var(--glass-shadow); align-self: start;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="background: rgba(34, 197, 94, 0.1); border-bottom: 2px solid #22c55e; color: #22c55e; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px;">
+                            <th colspan="4" style="padding: 15px; text-align: center; font-size: 1rem; font-weight: bold;">⚾ Most Wickets</th>
+                        </tr>
+                        <tr style="background: var(--bg-input); border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem;">
+                            <th style="padding: 10px 15px;">Player</th>
+                            <th style="padding: 10px 15px; text-align: right;">Wkts</th>
+                            <th style="padding: 10px 15px; text-align: right;">Overs</th>
+                            <th style="padding: 10px 15px; text-align: right;">Econ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+                
+                if (!data.top_bowlers || data.top_bowlers.length === 0) {
+                     html += `<tr><td colspan="4" style="padding: 20px; text-align: center; color: var(--text-muted);">No bowling stats yet.</td></tr>`;
+                } else {
+                     data.top_bowlers.forEach((p, i) => {
+                         const rankStyle = i === 0 ? 'color: gold; font-weight: bold;' : 'color: var(--text-color); font-weight: 500;';
+                         html += `
+                            <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;" onmouseover="this.style.background='var(--bg-input)'" onmouseout="this.style.background='transparent'">
+                                <td style="padding: 12px 15px;">
+                                    <div style="${rankStyle} font-size: 1.05rem;">${i+1}. ${p.name}</div>
+                                    <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 2px;">${p.team_name}</div>
+                                </td>
+                                <td style="padding: 12px 15px; text-align: right; font-weight: 800; color: #22c55e; font-size: 1.1rem;">${p.wickets}</td>
+                                <td style="padding: 12px 15px; text-align: right; color: var(--text-muted);">${Number(p.overs || 0).toFixed(1)}</td>
+                                <td style="padding: 12px 15px; text-align: right; color: var(--text-muted);">${Number(p.economy || 0).toFixed(2)}</td>
+                            </tr>
+                         `;
+                     });
+                }
+                html += `</tbody></table></div>`;
+                
+                // MVPs Grid (Only if completed)
+                if (isTournamentCompleted) {
+                    html += `
+                    <div style="background: var(--bg-card); border-radius: 14px; overflow: hidden; box-shadow: var(--glass-shadow); align-self: start;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="background: rgba(234, 179, 8, 0.1); border-bottom: 2px solid gold; color: gold; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px;">
+                                <th colspan="4" style="padding: 15px; text-align: center; font-size: 1rem; font-weight: bold;">🌟 Top 10 MVPs</th>
+                            </tr>
+                            <tr style="background: var(--bg-input); border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem;">
+                                <th style="padding: 10px 15px;">Player</th>
+                                <th style="padding: 10px 15px; text-align: right;">Runs</th>
+                                <th style="padding: 10px 15px; text-align: right;">Wkts</th>
+                                <th style="padding: 10px 15px; text-align: right;">MVP Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                    `;
+                    
+                    if (!data.top_mvps || data.top_mvps.length === 0) {
+                         html += `<tr><td colspan="4" style="padding: 20px; text-align: center; color: var(--text-muted);">No MVP stats yet.</td></tr>`;
+                    } else {
+                         data.top_mvps.forEach((p, i) => {
+                             const rankStyle = i === 0 ? 'color: gold; font-weight: bold;' : 'color: var(--text-color); font-weight: 500;';
+                             html += `
+                                <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;" onmouseover="this.style.background='var(--bg-input)'" onmouseout="this.style.background='transparent'">
+                                    <td style="padding: 12px 15px;">
+                                        <div style="${rankStyle} font-size: 1.05rem;">${i+1}. ${p.name}</div>
+                                        <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 2px;">${p.team_name}</div>
+                                    </td>
+                                    <td style="padding: 12px 15px; text-align: right; font-weight: 600; color: var(--text-color); font-size: 1rem;">${p.bat_runs}</td>
+                                    <td style="padding: 12px 15px; text-align: right; color: #22c55e;">${p.bowl_wickets}</td>
+                                    <td style="padding: 12px 15px; text-align: right; font-weight: bold; color: gold; font-size: 1.1rem;">${p.points}</td>
+                                </tr>
+                             `;
+                         });
+                    }
+                    
+                    html += `</tbody></table></div>`;
+                }
+
+                html += `</div>`;
+                div.innerHTML = html;
+            })
+            .catch(err => console.error("Stats loading error:", err));
+    }
+
+    // ================= COMPLETED =================
+    function loadCompleted() {
+        fetch(`/tournament-completed/${tournamentId}`)
+            .then(res => res.json())
+            .then(matches => {
+                let div = document.getElementById("matchList");
+                div.innerHTML = "";
+
+                if (matches.length === 0) {
+                    div.innerHTML = "<p style='color: var(--text-muted); padding: 20px; text-align: center;'>No completed matches yet.</p>";
+                    return;
+                }
+
+                matches.forEach(m => {
+                    const sl = stageLabel(m.stage);
+                    const winnerBadge = m.winner ? `<span style="background: rgba(34,197,94,0.1); color: #22c55e; padding: 3px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: bold;">🏆 ${m.winner}</span>` : '';
+
+                    div.innerHTML += `
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px 25px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--glass-shadow);">
+                            <div style="flex:1;">
+                                <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+                                    <span style="background:rgba(255,255,255,0.06); color:${sl.color}; padding:3px 12px; border-radius:20px; font-size:0.78rem; font-weight:bold; border:1px solid ${sl.color}33;">${sl.text}</span>
+                                    ${winnerBadge}
+                                </div>
+                                <h5 style="color: var(--text-color); font-size: 1.15rem; margin: 0 0 8px 0;">${m.team1} <span style="color:var(--text-muted); font-size:0.9rem; margin:0 8px;">vs</span> ${m.team2}</h5>
+                                <p style="color: var(--text-muted); margin: 0; font-size: 0.92rem;">
+                                    <span style="color: var(--text-color); font-weight: 500;">${m.team1}</span>: ${m.team1_score}/${m.team1_wickets} (${Number(m.team1_overs).toFixed(1)})
+                                    <span style="color: var(--accent-primary); margin: 0 10px;">•</span>
+                                    <span style="color: var(--text-color); font-weight: 500;">${m.team2}</span>: ${m.team2_score}/${m.team2_wickets} (${Number(m.team2_overs).toFixed(1)})
+                                </p>
+                            </div>
+                            <button class="submit-btn" style="width:auto; padding:10px 20px; margin:0 0 0 20px; flex-shrink:0;" onclick="viewScorecard(${m.match_id})">Scorecard</button>
+                        </div>
+                    `;
+                });
+            });
+    }
+
+    // ================= ACTIONS =================
+    function startMatch(id) {
+        fetch(`/prepare-match/${id}`, { method: "POST" })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) { alert(data.error); return; }
+                window.location.href = `/toss/${id}`;
+            });
+    }
+
+    function viewScorecard(id) {
+        window.location.href = `/scorecard?match_id=${id}`;
+    }
+
+    // ================= AUTO LOAD =================
+    document.addEventListener("DOMContentLoaded", () => {
+        loadTournamentStats();
+        showTab("upcoming");
+    });
+</script>
+{% endblock %}

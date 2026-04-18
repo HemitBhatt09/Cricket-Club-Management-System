@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}My Tournaments - CCMS{% endblock %}
+{% block header_title %}🏅 My Tournaments{% endblock %}
+
+{% block content %}
+<style>
+    .tournament-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 22px;
+    }
+
+    .tourney-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: var(--glass-shadow);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .tourney-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .tourney-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+
+    .tourney-card:hover::before {
+        opacity: 1;
+    }
+
+    .tourney-card h5 {
+        color: var(--text-color);
+        font-size: 1.2rem;
+        margin: 0 0 12px 0;
+        font-weight: 700;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    .status-upcoming {
+        background: rgba(100,116,139,0.15);
+        color: var(--text-muted);
+        border: 1px solid rgba(100,116,139,0.3);
+    }
+
+    .status-ongoing {
+        background: rgba(14,165,233,0.12);
+        color: var(--accent-primary);
+        border: 1px solid rgba(14,165,233,0.3);
+    }
+
+    .status-completed {
+        background: rgba(255,215,0,0.1);
+        color: gold;
+        border: 1px solid rgba(255,215,0,0.35);
+    }
+
+    .info-row {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin: 0 0 18px 0;
+    }
+
+    .btn-primary {
+        display: inline-block;
+        padding: 11px 22px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+        color: white;
+        border: none;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 6px 18px rgba(14,165,233,0.3);
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(14,165,233,0.5);
+    }
+
+    .btn-gold {
+        background: linear-gradient(135deg, #f59e0b, gold);
+        color: #0f172a;
+        box-shadow: 0 6px 18px rgba(255,215,0,0.3);
+    }
+
+    .btn-gold:hover {
+        box-shadow: 0 10px 25px rgba(255,215,0,0.5);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-muted);
+    }
+
+    .empty-state .icon {
+        font-size: 4rem;
+        margin-bottom: 15px;
+        opacity: 0.4;
+    }
+</style>
+
+<div id="myTournaments" class="tournament-grid"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function getStatus(t) {
+        if (!t.is_started) return "Upcoming";
+        if (t.is_started && !t.is_completed) return "Ongoing";
+        return "Completed";
+    }
+
+    function loadMyTournaments() {
+        fetch("/my-tournaments")
+            .then(async res => {
+                let data;
+                try { data = await res.json(); }
+                catch (err) { console.error("❌ Invalid JSON:", err); return; }
+
+                if (!res.ok) { console.error("❌ Backend Error:", data); return; }
+
+                const div = document.getElementById("myTournaments");
+                div.innerHTML = "";
+
+                if (data.length === 0) {
+                    div.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1/-1;">
+                            <div class="icon">🏏</div>
+                            <h3 style="color: var(--text-muted); margin: 0 0 10px 0;">No Tournaments Yet</h3>
+                            <p style="margin: 0;">You haven't hosted any tournaments. Click "Host Tournament" to get started!</p>
+                        </div>`;
+                    return;
+                }
+
+                data.forEach(t => {
+                    const status = getStatus(t);
+                    let badgeClass = status === 'Upcoming' ? 'status-upcoming' : (status === 'Ongoing' ? 'status-ongoing' : 'status-completed');
+                    const statusIcon = status === 'Upcoming' ? '⏳' : (status === 'Ongoing' ? '🔴' : '🏆');
+
+                    const btnHtml = status === "Completed"
+                        ? `<button class="btn-primary btn-gold" onclick="viewTournament(${t.tournament_id})">🏆 View Results</button>`
+                        : `<button class="btn-primary" onclick="manageTournament(${t.tournament_id}, ${t.is_started})">${status === 'Upcoming' ? '⚙️ Manage' : '▶ Manage'}</button>`;
+
+                    div.innerHTML += `
+                        <div class="tourney-card">
+                            <span class="status-badge ${badgeClass}">${statusIcon} ${status}</span>
+                            <h5>${t.tournament_name}</h5>
+                            <p class="info-row">
+                                <span style="margin-right:15px;">👥 Teams: <strong style="color:var(--text-color);">${t.total_teams}</strong></span>
+                            </p>
+                            ${btnHtml}
+                        </div>
+                    `;
+                });
+            })
+            .catch(err => console.error("❌ Fetch Error:", err));
+    }
+
+    function manageTournament(id, is_started) {
+        if (is_started) {
+            window.location.href = `/tournament/${id}/matches`;
+        } else {
+            window.location.href = `/tournament/${id}`;
+        }
+    }
+
+    function viewTournament(id) {
+        // Always go to the matches page for full details (completed tournaments stay viewable)
+        window.location.href = `/tournament/${id}/matches`;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadMyTournaments();
+    });
+</script>
+{% endblock %}

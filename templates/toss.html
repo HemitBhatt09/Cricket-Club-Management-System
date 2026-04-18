@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+
+{% block title %}Match Setup - Toss{% endblock %}
+{% block header_title %}🔄 Match Setup (Toss){% endblock %}
+
+{% block content %}
+<style>
+.toss-container {
+    background: var(--bg-card);
+    backdrop-filter: var(--glass-blur);
+    padding: 40px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--glass-shadow);
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.match-heading {
+    color: var(--accent-primary);
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 30px;
+    text-shadow: 0 0 10px rgba(14, 165, 233, 0.3);
+}
+
+.step-card {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 16px;
+    padding: 25px;
+    margin-bottom: 25px;
+    transition: all 0.3s ease;
+}
+
+.step-card h5 {
+    margin-top: 0;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+}
+
+.choice-grid {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.choice-btn {
+    flex: 1;
+    max-width: 200px;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    background: var(--bg-sidebar);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.choice-btn:hover {
+    background: rgba(255,255,255,0.1);
+    transform: translateY(-2px);
+}
+.choice-btn.active {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4);
+}
+
+.custom-input {
+    width: 100%;
+    max-width: 200px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--input-bg);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 1.2rem;
+    outline: none;
+    text-align: center;
+    transition: all 0.3s;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+    box-sizing: border-box;
+}
+.custom-input:focus {
+    border-color: var(--accent-primary);
+    background: var(--input-focus-bg);
+    box-shadow: 0 0 15px rgba(14, 165, 233, 0.3), inset 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.submit-btn {
+    width: 100%;
+    max-width: 400px;
+    padding: 16px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent-secondary), #059669);
+    color: white;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+    margin-top: 20px;
+}
+.submit-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(16, 185, 129, 0.5);
+}
+
+.btn-quick-select {
+    background: rgba(14, 165, 233, 0.1); 
+    color: var(--accent-primary); 
+    border: 1px solid var(--accent-primary); 
+    padding: 6px 15px; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    font-size: 0.85rem; 
+    font-weight: bold; 
+    transition: all 0.3s; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 5px;
+}
+.btn-quick-select:hover {
+    background: var(--accent-primary);
+    color: white;
+    box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
+}
+</style>
+
+<div class="toss-container">
+
+    <div class="match-heading" id="teams"></div>
+
+    <!-- Playing 11 Selection -->
+    <div class="step-card" style="text-align: left;">
+        <h5 style="text-align: center;">1. Select Playing 11</h5>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Team 1 -->
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h6 style="color: var(--text-color); margin: 0; font-size: 1.1rem;">{{ match.team1_name }}</h6>
+                    <button class="btn-quick-select" onclick="autoSelect11('team1_cb', 't1Count')">⚡ Auto 11</button>
+                </div>
+                <div style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                    {% for p in team1_squad %}
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" class="team1_cb" value="{{ p.user_id }}" style="accent-color: var(--accent-primary); width: 18px; height: 18px;">
+                        <span style="color: var(--text-muted);">{{ p.name }} ({{ p.role }})</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div style="margin-top: 10px; font-size: 0.9rem; text-align: right; color: var(--accent-primary);"><span id="t1Count">0</span>/11 Selected</div>
+            </div>
+
+            <!-- Team 2 -->
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h6 style="color: var(--text-color); margin: 0; font-size: 1.1rem;">{{ match.team2_name }}</h6>
+                    <button class="btn-quick-select" onclick="autoSelect11('team2_cb', 't2Count')">⚡ Auto 11</button>
+                </div>
+                <div style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                    {% for p in team2_squad %}
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" class="team2_cb" value="{{ p.user_id }}" style="accent-color: var(--accent-secondary); width: 18px; height: 18px;">
+                        <span style="color: var(--text-muted);">{{ p.name }} ({{ p.role }})</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div style="margin-top: 10px; font-size: 0.9rem; text-align: right; color: var(--accent-secondary);"><span id="t2Count">0</span>/11 Selected</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toss Winner -->
+    <div class="step-card">
+        <h5>2. Who won the toss?</h5>
+        <div id="tossOptions" class="choice-grid"></div>
+    </div>
+
+    <!-- Decision -->
+    <div id="decisionSection" class="step-card" style="display:none;">
+        <h5>3. What is their decision?</h5>
+        <div class="choice-grid">
+            <button id="btnBat" class="choice-btn" onclick="selectDecision('BAT', this)">🏏 Bat</button>
+            <button id="btnBowl" class="choice-btn" onclick="selectDecision('BOWL', this)">⚾ Bowl</button>
+        </div>
+    </div>
+
+    <!-- Overs -->
+    <div id="oversSection" class="step-card" style="display:none;">
+        <h5>4. Match Overs</h5>
+        {% if match.tournament_id %}
+            <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-primary); background: rgba(14, 165, 233, 0.1); padding: 15px; border-radius: 12px; border: 1px solid var(--accent-primary); display: inline-block;">
+                Tournament Rule: {{ match.total_overs }} Overs
+            </div>
+            <input type="hidden" id="overs" value="{{ match.total_overs }}">
+        {% else %}
+            <input type="number" id="overs" class="custom-input" placeholder="e.g. 5, 20">
+        {% endif %}
+    </div>
+
+    <button class="submit-btn" onclick="saveToss()">🚀 Start Match</button>
+
+</div>
+
+<!-- ✅ SAFE DATA PASSING -->
+<script id="match-data" type="application/json">
+    {{ match | tojson }}
+</script>
+
+<script>
+let matchData = JSON.parse(document.getElementById("match-data").textContent);
+let tossWinner = null;
+let decision = null;
+
+// ================= SHOW TEAMS =================
+document.getElementById("teams").innerText =
+    matchData.team1_name + " vs " + matchData.team2_name;
+
+// ================= SELECT TOSS =================
+function selectToss(teamId, btn) {
+    tossWinner = teamId;
+    
+    // Update active state
+    document.querySelectorAll('#tossOptions .choice-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    document.getElementById("decisionSection").style.display = "block";
+}
+
+// ================= SELECT DECISION =================
+function selectDecision(dec, btn) {
+    decision = dec;
+
+    // Update active state
+    document.getElementById("btnBat").classList.remove('active');
+    document.getElementById("btnBowl").classList.remove('active');
+    btn.classList.add('active');
+
+    document.getElementById("oversSection").style.display = "block";
+    document.getElementById("overs").focus();
+}
+
+// ================= SELECTION LOGIC =================
+document.querySelectorAll('.team1_cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+        const checked = document.querySelectorAll('.team1_cb:checked').length;
+        document.getElementById('t1Count').innerText = checked;
+        if(checked > 11) {
+            cb.checked = false;
+            document.getElementById('t1Count').innerText = 11;
+            alert("You can only select exactly 11 players.");
+        }
+    });
+});
+
+document.querySelectorAll('.team2_cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+        const checked = document.querySelectorAll('.team2_cb:checked').length;
+        document.getElementById('t2Count').innerText = checked;
+        if(checked > 11) {
+            cb.checked = false;
+            document.getElementById('t2Count').innerText = 11;
+            alert("You can only select exactly 11 players.");
+        }
+    });
+});
+
+// ================= AUTO SELECT =================
+function autoSelect11(checkboxClass, countId) {
+    const checkboxes = document.querySelectorAll(`.${checkboxClass}`);
+    let count = 0;
+    checkboxes.forEach((cb, index) => {
+        if (index < 11) {
+            cb.checked = true;
+            count++;
+        } else {
+            cb.checked = false;
+        }
+    });
+    document.getElementById(countId).innerText = count;
+}
+
+// ================= SAVE =================
+function saveToss() {
+    let overs = parseInt(document.getElementById("overs").value);
+    
+    let team1_11 = Array.from(document.querySelectorAll('.team1_cb:checked')).map(cb => parseInt(cb.value));
+    let team2_11 = Array.from(document.querySelectorAll('.team2_cb:checked')).map(cb => parseInt(cb.value));
+
+    if (team1_11.length !== 11 || team2_11.length !== 11) {
+        return alert("You MUST select exactly 11 players for both teams before starting the match.");
+    }
+
+    if (!tossWinner || !decision || !overs) {
+        return alert("Please complete the Toss, Decision, and ensure Overs are set.");
+    }
+
+    // Optional visual loading state
+    const submitBtn = document.querySelector('.submit-btn');
+    submitBtn.innerText = "Processing...";
+    submitBtn.style.opacity = "0.7";
+    submitBtn.style.pointerEvents = "none";
+
+    fetch("/save-toss", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            match_id: matchData.match_id,
+            toss_winner_id: tossWinner,
+            decision: decision,
+            total_overs: overs,
+            team1_11: team1_11,
+            team2_11: team2_11
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            submitBtn.innerText = "🚀 Start Match";
+            submitBtn.style.opacity = "1";
+            submitBtn.style.pointerEvents = "auto";
+            alert(data.error);
+        } else {
+            alert(data.message);
+            window.location.href = `/select-players/${matchData.match_id}`;
+        }
+    });
+}
+
+// ================= INIT BUTTONS =================
+document.getElementById("tossOptions").innerHTML = `
+    <button class="choice-btn" onclick="selectToss(${matchData.team1_id}, this)">
+        ${matchData.team1_name}
+    </button>
+    <button class="choice-btn" onclick="selectToss(${matchData.team2_id}, this)">
+        ${matchData.team2_name}
+    </button>
+`;
+
+</script>
+{% endblock %}

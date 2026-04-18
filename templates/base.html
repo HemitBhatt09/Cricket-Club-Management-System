@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CCMS{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- 🔥 SIDEBAR -->
+        {% block sidebar %}
+        <div class="sidebar">
+            <h2>🏏 CCMS</h2>
+
+            <ul>
+                <li onclick="goTo('/dashboard')">🏠 Dashboard</li>
+                <li onclick="goTo('/team')">👥 Teams</li>
+                <li onclick="goTo('/match')">🏏 Matches</li>
+                <li onclick="goTo('/tourney')">🏆 Tournament</li>
+                <li onclick="goTo('/host-tournament')">➕ Host Tournament</li>
+                <li onclick="goTo('/profile')">👤 My Profile</li>
+                <li onclick="goTo('/mytourney')">🏅 My Tournaments</li>
+
+                <li onclick="goTo('/logout')" style="color: #ef4444; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 15px; margin-top: 15px;">🚪 Logout</li>
+            </ul>
+        </div>
+        {% endblock %}
+
+        <!-- 🔥 MAIN CONTENT -->
+        <div class="content">
+
+            {% block header %}
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 style="margin-bottom: 0;">{% block header_title %}{% endblock %}</h2>
+                <button id="themeToggleBtn" onclick="toggleTheme()"
+                    style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px 15px; border-radius: 8px; cursor: pointer; backdrop-filter: var(--glass-blur); font-size: 1.2rem; transition: all 0.3s ease; box-shadow: var(--glass-shadow);">
+                    ☀️
+                </button>
+            </div>
+            {% endblock %}
+
+            {% block content %}{% endblock %}
+
+        </div>
+
+    </div>
+
+    <script>
+        function goTo(url) {
+            window.location.href = url;
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeBtn = document.getElementById('themeToggleBtn');
+            body.classList.toggle('light-theme');
+
+            if (body.classList.contains('light-theme')) {
+                localStorage.setItem('theme', 'light');
+                if (themeBtn) themeBtn.innerText = '🌙';
+            } else {
+                localStorage.setItem('theme', 'dark');
+                if (themeBtn) themeBtn.innerText = '☀️';
+            }
+        }
+
+        // Load theme on startup
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedTheme = localStorage.getItem('theme');
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+                if (themeBtn) themeBtn.innerText = '🌙';
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>
